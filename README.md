@@ -1,6 +1,6 @@
 # fortesbi
 
-# Para execução primeiramente precisa ter o arquivo .fdb com a conexão odbc estabelecida
+## Para execução primeiramente precisa ter o arquivo .fdb com a conexão odbc estabelecida
 
 # Em seguida configure o ambiente para suporte às seguintes bibliotecas:
 
