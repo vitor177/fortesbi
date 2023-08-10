@@ -4,10 +4,10 @@ Para execução primeiramente precisa ter o arquivo .fdb com a conexão odbc est
 
 Seguidamente configure o ambiente para suporte às seguintes bibliotecas:
 
-pyodbc
-datetime
-pandas
-openpyxl
+[pyodbc,
+datetime,
+pandas,
+openpyxl]
 
 Rode o script extracao_bd_to_xlsx.py e obtenha o arquivo excel de saída
 
