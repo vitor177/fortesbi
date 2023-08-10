@@ -1,8 +1,12 @@
 # fortesbi
 
-Para execução primeiramente precisa ter o arquivo .fdb com a conexão odbc estabelecida
+Fortesbi é um projeto para extração de dados de um banco de dados disponibilizado pela Fortes para visualização de dados no programa Power BI
 
-Em seguida configure o ambiente para suporte às seguintes bibliotecas:
+A ideia desse código é gerar um arquivo final em formato .xlsx com todas as informações necessárias para visualização no Power BI
+
+Para execução primeiramente precisa ter o arquivo .fdb do banco com a conexão odbc estabelecida em sua máquina local 
+
+Em seguida configure o ambiente python para suporte às seguintes bibliotecas:
 
 [pyodbc,
 datetime,
