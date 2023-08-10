@@ -22,19 +22,12 @@ for string in df10['HISTORICO']:
 
 df10['HISTORICO'] = lista
 
-print(df10.head())
-
-    
-#    pass
-
-#print(lista)
-    
 
 
 output_filename = "Final_vf.xlsx"
 
 
-#writer = pd.ExcelWriter(output_filename, engine='xlsxwriter')
+writer = pd.ExcelWriter(output_filename, engine='xlsxwriter')
 
 
-#df10.to_excel(output_filename,index=False, engine='xlsxwriter')
+df10.to_excel(output_filename,index=False, engine='xlsxwriter')
