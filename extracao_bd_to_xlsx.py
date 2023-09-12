@@ -191,6 +191,6 @@ for indice, linha in df.iterrows():
 df_2 = pd.DataFrame(insercoes)
 df_final = pd.concat([df_1, df_2, df_3])
 df_final.columns = ['EMPRESA', 'CODIGO', 'DATA', 'VALOR', 'HISTORICO', 'ORIGEM', 'NATUREZA', 'CRD', 'CRS']
-df_final.to_excel('FINAL_with3.xlsx', index=False)
+df_final.to_excel('FINAL.xlsx', index=False)
 cursor.close()
 conn.close()
