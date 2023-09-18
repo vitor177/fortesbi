@@ -1,7 +1,3 @@
-# Me desculpem por esse código vergonhosamente horrível, foi uma demanda inesperada e eu precisava fazer rápido, também
-# surgiram vários pedidos de alterações durante o desenvolvimento, o que contribuiu mais ainda para esse código feio 
-# É facilmente refatorável e otimizável
-
 import pyodbc
 import datetime
 import pandas as pd
@@ -17,8 +13,8 @@ cursor3 = conn.cursor()
 data = datetime.datetime(2023,3,31)
 
 cursor0.execute(f"SELECT EST.NOME, LAN.CODIGO, LAN.DATA, LAN.VALOR, LAN.HISTORICO, LAN.ORIGEM, LAN.NATUREZA, CRD.NOME, CRS.NOME FROM LAN LEFT JOIN EST ON LAN.EST_CODIGO=EST.CODIGO AND EST.EMP_CODIGO=LAN.EMP_CODIGO LEFT JOIN CRS ON LAN.CRS_CODIGO=CRS.CODIGO AND CRS.EMP_CODIGO=LAN.EMP_CODIGO LEFT JOIN CRD ON CRD.CODIGO=LAN.CRD_CODIGO AND CRD.EMP_CODIGO=LAN.EMP_CODIGO WHERE LAN.DATA > '{data}' AND LAN.NATUREZA IS NOT NULL")
-cursor.execute(f"SELECT DISTINCT CRE.EMP_CODIGO, BVD.VALOR, CRD.NOME, CRS.NOME, BVD.DATA, EST.NOME, CRE.CODIGO, CRE.OBS, CRE.VALOR, CRE.ISS, CRE.IRRF, CRE.INSS, CRE.PISCOFINSCSL, CRE.PIS, CRE.COFINS, CRE.CSL, CRE.VALOROUTRASRETENCOES FROM CRE INNER JOIN BVD ON CRE.CODIGO=BVD.VDR_CRE_CODIGO AND CRE.EMP_CODIGO=BVD.EMP_CODIGO INNER JOIN CRD ON CRE.CRD_CODIGO=CRD.CODIGO AND CRE.EMP_CODIGO=CRD.EMP_CODIGO INNER JOIN EST ON CRE.EST_CODIGO=EST.CODIGO AND EST.EMP_CODIGO=CRE.EMP_CODIGO INNER JOIN CRS ON CRS.EMP_CODIGO=CRE.EMP_CODIGO AND CRS.CODIGO=CRE.CRS_CODIGO WHERE BVD.DTCANCEL IS NULL")
-cursor2.execute(f"SELECT EMP_CODIGO, VDR_CRE_CODIGO, SUM(VALOR) FROM BVD GROUP BY VDR_CRE_CODIGO, EMP_CODIGO")
+cursor.execute(f"SELECT DISTINCT CRE.EMP_CODIGO, CRE.VALOR, CRD.NOME, CRS.NOME, CRE.DTEMISSAO, EST.NOME, CRE.CODIGO, CRE.OBS, CRE.VALOR, CRE.ISS, CRE.IRRF, CRE.INSS, CRE.PISCOFINSCSL, CRE.PIS, CRE.COFINS, CRE.CSL, CRE.VALOROUTRASRETENCOES FROM CRE INNER JOIN CRD ON CRE.CRD_CODIGO=CRD.CODIGO AND CRE.EMP_CODIGO=CRD.EMP_CODIGO INNER JOIN EST ON CRE.EST_CODIGO=EST.CODIGO AND EST.EMP_CODIGO=CRE.EMP_CODIGO INNER JOIN CRS ON CRS.EMP_CODIGO=CRE.EMP_CODIGO AND CRS.CODIGO=CRE.CRS_CODIGO")
+cursor2.execute(f"SELECT EMP_CODIGO, VDR_CRE_CODIGO, VALOR FROM BVD")
 cursor3.execute(f"SELECT DISTINCT CRE.EMP_CODIGO, CRE.VALOR, CRD.NOME, CRS.NOME, CRE.DTEMISSAO, EST.NOME, CRE.CODIGO, CRE.OBS, CRE.VALOR, CRE.ISS, CRE.IRRF, CRE.INSS, CRE.PISCOFINSCSL, CRE.PIS, CRE.COFINS, CRE.CSL, CRE.VALOROUTRASRETENCOES FROM CRE INNER JOIN CRD ON CRE.CRD_CODIGO=CRD.CODIGO AND CRE.EMP_CODIGO=CRD.EMP_CODIGO INNER JOIN EST ON CRE.EST_CODIGO=EST.CODIGO AND EST.EMP_CODIGO=CRE.EMP_CODIGO INNER JOIN CRS ON CRS.EMP_CODIGO=CRE.EMP_CODIGO AND CRS.CODIGO=CRE.CRS_CODIGO")
 
 
@@ -59,34 +55,24 @@ insercoes0 = []
 df['OBS'] = [bytes(str(string), 'utf-8').decode('unicode-escape').encode().decode('utf-8')[2:-1] for string in df['OBS']]
 df_0['HISTORICO'] = [bytes(str(string), 'utf-8').decode('unicode-escape').encode().decode('utf-8')[2:-1] for string in df_0['HISTORICO']]
 
-for indice,linha in df_3.iterrows():
-    somaImpostos = 0
 
+# Lançamentos CRE
+for indice,linha in df_3.iterrows():
     empresa = linha['EMPRESA']
     cre_codigo = linha['CODIGO']
     cre_data = linha['DTEMISSAO']
     valor = linha['VALOR']
     cre_historico = linha['OBS']
-    novasLinhas = []
-
     cre_origem = "EMITIDO"
     cre_natureza = "EMITIDO"
     crd_nome = linha['NOMECRD']
     crs_nome = linha['NOMECRS']
-    
-    
-    
-    
-    
-        
     cod_empresa = linha['EMPCODIGO']
-
     insercoes3.append((empresa, cre_codigo, cre_data, valor, cre_historico, cre_origem, cre_natureza, crd_nome, crs_nome))
 df_3 = pd.DataFrame(insercoes3)
 
 
-
-
+# LAN
 for indice, linha in df_0.iterrows():
     empresa_df0 = linha['EMPRESA']
     codigo_df0 = linha['CODIGO']
@@ -105,9 +91,9 @@ for indice, linha in df_0.iterrows():
 
 df_1 = pd.DataFrame(insercoes0)
 
+# AJUSTES (CRE COM BVD)
 
-
-
+# CRE
 for indice, linha in df.iterrows():
     valor = linha['VALOR']
     crd_nome = linha['NOMECRD']
@@ -117,21 +103,41 @@ for indice, linha in df.iterrows():
     lan_data = linha['DATA']
     lan_historico = linha['OBS']
     cod_empresa = linha['EMPCODIGO']
-    somaImpostos = linha['ISS'] +  linha['IRRF'] + linha['PISCOFINSCSL'] + linha['COFINS'] + linha['CSL'] + linha['INSS'] + linha['VALOROUTRASRETENCOES']
+    somaImpostos = linha['ISS'] +  linha['IRRF'] + linha['COFINS'] + linha['CSL'] + linha['INSS'] + linha['PIS']
+
+    lista_cdgs = []
+
+    # BVD
     for indice2, linha2 in df_group_by.iterrows():
+        lan_origem = "D"
+        lan_natureza = "E"
+
         if lan_codigo == linha2['CODIGO'] and cod_empresa == linha2['EMPRESA']:
-            cdg = linha2['VALOR']
-            break    
-# margem de erro gambiarra pois confusão com valores float 0 e tipo int 0
-    if abs(valor - somaImpostos - cdg )> 0.001 or (valor - somaImpostos - cdg < 0.001) and ():        
-        lan_origem = "NAOSEI"
-        lan_natureza = "MUITOMENOS"
+
+            cdg = linha2['VALOR']/((valor-somaImpostos)/valor) ##   valorLiquido      /    (valorBruto-SomaImpostos)/ValorBruto
+
+            lista_nomes = ['PRESTAÇÃO DE SERVIÇO DE ENGENHARIA - MANUTENÇÃO',
+                                    'RECEITA - SERVIÇOS REFORMA PREDIAL',
+                                    'RECEITA - SERVIÇOS DE MANUTENCAO',
+                                    'PRESTAÇÃO DE SERVIÇO DE MANUT - ESGOT SANITÁRIO',
+                                    'PRESTAÇÃO DE SERVIÇO DE MAO DE OBRA - ENGENHARIA']
+            
+            for i in lista_nomes:
+                if crd_nome == i:
+                    crd_nome = i + ' - BRUTO' 
+                    insercoes.append((empresa, lan_codigo, lan_data, cdg, lan_historico, lan_origem, lan_natureza, crd_nome, crs_nome)) 
+            lista_cdgs.append(cdg)
+
+    if abs(valor - somaImpostos - sum(lista_cdgs) )> 0.001 or (valor - somaImpostos - sum(lista_cdgs) < 0.001) and ():        
+        lan_origem = "DIVERGENTE"
+        lan_natureza = "DIVERGENTE"
         lan_historico =  "DIF DE: " + str(lan_historico)           
         linha_CRD_NOME = "DIF A RECEBER / PENDENCIA: "
         insercoes.append((empresa, lan_codigo, lan_data, valor-somaImpostos-cdg, lan_historico, lan_origem, lan_natureza, linha_CRD_NOME, crs_nome))
     if linha['ISS'] == 0 and linha['IRRF'] == 0 and linha['PISCOFINSCSL'] == 0 and linha['COFINS'] and linha['CSL'] == 0 and linha['INSS'] == 0 and linha['VALOROUTRASRETENCOES'] == 0:
         pass
     else:
+        lan_historico = linha['OBS']
         if linha['ISS'] != 0:
             lan_origem = "R"
             lan_natureza = "S"            
@@ -174,23 +180,47 @@ for indice, linha in df.iterrows():
             valor = linha['VALOROUTRASRETENCOES']*-1
             linha_CRD_NOME = "VALOROUTRASRETENCOES - S/FATURAMENTO"
             insercoes.append((empresa, lan_codigo, lan_data, valor, lan_historico, lan_origem, lan_natureza, linha_CRD_NOME, crs_nome))
-        if linha['VALOR'] != 0:
-            lan_origem = "D"
-            lan_natureza = "E"
-            valor = linha['VALOR']
-            linha_CRD_NOME =  crd_nome
-            lista_nomes = ['PRESTAÇÃO DE SERVIÇO DE ENGENHARIA - MANUTENÇÃO',
-                                    'RECEITA - SERVIÇOS REFORMA PREDIAL',
-                                    'RECEITA - SERVIÇOS DE MANUTENCAO',
-                                    'PRESTAÇÃO DE SERVIÇO DE MANUT - ESGOT SANITÁRIO',
-                                    'PRESTAÇÃO DE SERVIÇO DE MAO DE OBRA - ENGENHARIA']
-            for i in lista_nomes:
-                if linha_CRD_NOME == i:
-                    linha_CRD_NOME = i + ' - BRUTO' 
-                    insercoes.append((empresa, lan_codigo, lan_data, valor, lan_historico, lan_origem, lan_natureza, linha_CRD_NOME, crs_nome)) 
+         
 df_2 = pd.DataFrame(insercoes)
 df_final = pd.concat([df_1, df_2, df_3])
 df_final.columns = ['EMPRESA', 'CODIGO', 'DATA', 'VALOR', 'HISTORICO', 'ORIGEM', 'NATUREZA', 'CRD', 'CRS']
-df_final.to_excel('FINAL_veai_V4.xlsx', index=False)
+df_final.to_excel('FINAL.xlsx', index=False)
 cursor.close()
 conn.close()
+
+import pandas as pd
+import re
+df10 = pd.read_excel('./FINAL.xlsx')
+
+
+df10.columns = ['EMPRESA', 'CODIGO', 'DATA', 'VALOR', 'HISTORICO', 'NATUREZA', 'ORIGEM', 'CATEGORIA', 'CENTRO DE CUSTO']
+
+
+lista = []
+for string in df10['HISTORICO']:
+    string = bytes(str(string), 'utf-8')
+    #print(type(string))
+    string = string.decode('unicode-escape').encode().decode('utf-8')
+
+
+    lista.append(string)
+
+df10['HISTORICO'] = lista
+
+
+output_filename = "./Final_vf.xlsx"
+
+
+writer = pd.ExcelWriter(output_filename, engine='xlsxwriter')
+
+
+df10.to_excel(output_filename,index=False, engine='xlsxwriter')
+
+import os
+
+arquivo_a_apagar = 'FINAL.xlsx'  # Substitua pelo nome do arquivo que deseja apagar
+
+if os.path.isfile(arquivo_a_apagar):
+    os.unlink(arquivo_a_apagar)
+
+print("Terminou")
