@@ -56,15 +56,15 @@ df['OBS'] = [bytes(str(string), 'utf-8').decode('unicode-escape').encode().decod
 df_0['HISTORICO'] = [bytes(str(string), 'utf-8').decode('unicode-escape').encode().decode('utf-8')[2:-1] for string in df_0['HISTORICO']]
 
 
-# Lançamentos CRE
+# Lançamentos da tabela CRE 
 for indice,linha in df_3.iterrows():
     empresa = linha['EMPRESA']
     cre_codigo = linha['CODIGO']
     cre_data = linha['DTEMISSAO']
     valor = linha['VALOR']
     cre_historico = linha['OBS']
-    cre_origem = "EMITIDO"
-    cre_natureza = "EMITIDO"
+    cre_origem = "ORIGEM CRE"
+    cre_natureza = "ORIGEM CRE"
     crd_nome = linha['NOMECRD']
     crs_nome = linha['NOMECRS']
     cod_empresa = linha['EMPCODIGO']
@@ -72,7 +72,7 @@ for indice,linha in df_3.iterrows():
 df_3 = pd.DataFrame(insercoes3)
 
 
-# LAN
+# Lançamentos da tabela LAN
 for indice, linha in df_0.iterrows():
     empresa_df0 = linha['EMPRESA']
     codigo_df0 = linha['CODIGO']
@@ -91,9 +91,9 @@ for indice, linha in df_0.iterrows():
 
 df_1 = pd.DataFrame(insercoes0)
 
-# AJUSTES (CRE COM BVD)
+############################################################
 
-# CRE
+# Lançamentos para Receita
 for indice, linha in df.iterrows():
     valor = linha['VALOR']
     crd_nome = linha['NOMECRD']
@@ -109,31 +109,128 @@ for indice, linha in df.iterrows():
 
     # BVD
     for indice2, linha2 in df_group_by.iterrows():
-        lan_origem = "D"
-        lan_natureza = "E"
+        lan_origem = "DFC ORIGEM"
+        lan_natureza = "DFC ORIGEM"
 
         if lan_codigo == linha2['CODIGO'] and cod_empresa == linha2['EMPRESA']:
 
             cdg = linha2['VALOR']/((valor-somaImpostos)/valor) ##   valorLiquido      /    (valorBruto-SomaImpostos)/ValorBruto
 
+            if linha2['CODIGO'] =="20230400006" and linha2['EMPRESA'] == "0003":
+                print("valor LIQUIDO: ", linha2['VALOR'])
+                print("VALOR DIVISAO CDG: ", cdg)
+                print("valor BRUTO: ", valor)
+                print("SomaImpostos: ", somaImpostos)
+                print("CRD NOME: ", crd_nome)
+                print("ISS:  ", linha['ISS'])
+                print("IRRF: ", linha['IRRF'])
+                print("COFINS: ", linha['COFINS'])
+                print("CSL: ", linha['CSL'])
+                print("INSS: ", linha['INSS'])
+                print("PIS: ", linha['PIS'])
+
             lista_nomes = ['PRESTAÇÃO DE SERVIÇO DE ENGENHARIA - MANUTENÇÃO',
                                     'RECEITA - SERVIÇOS REFORMA PREDIAL',
                                     'RECEITA - SERVIÇOS DE MANUTENCAO',
                                     'PRESTAÇÃO DE SERVIÇO DE MANUT - ESGOT SANITÁRIO',
-                                    'PRESTAÇÃO DE SERVIÇO DE MAO DE OBRA - ENGENHARIA']
+                                    'PRESTAÇÃO DE SERVIÇO DE MAO DE OBRA - ENGENHARIA',
+                                    'RECEITA - SERVIÇOS DE MANUTENCAO - BRUTO']
             
             for i in lista_nomes:
                 if crd_nome == i:
-                    crd_nome = i + ' - BRUTO' 
-                    insercoes.append((empresa, lan_codigo, lan_data, cdg, lan_historico, lan_origem, lan_natureza, crd_nome, crs_nome)) 
+                    insercoes.append((empresa, lan_codigo, lan_data, cdg, lan_historico, lan_origem, lan_natureza, crd_nome + " - BRUTO", crs_nome)) 
             lista_cdgs.append(cdg)
 
-    if abs(valor - somaImpostos - sum(lista_cdgs) )> 0.001 or (valor - somaImpostos - sum(lista_cdgs) < 0.001) and ():        
-        lan_origem = "DIVERGENTE"
-        lan_natureza = "DIVERGENTE"
-        lan_historico =  "DIF DE: " + str(lan_historico)           
-        linha_CRD_NOME = "DIF A RECEBER / PENDENCIA: "
-        insercoes.append((empresa, lan_codigo, lan_data, valor-somaImpostos-cdg, lan_historico, lan_origem, lan_natureza, linha_CRD_NOME, crs_nome))
+
+############################
+
+# Lançamentos para Impostos da DFC
+for indice, linha in df.iterrows():
+    valor = linha['VALOR']
+    valorBruto = valor
+    crd_nome = linha['NOMECRD']
+    crs_nome = linha['NOMECRS']
+    empresa = linha['EMPRESA']
+    lan_codigo = linha['CODIGO']
+    lan_data = linha['DATA']
+    lan_historico = linha['OBS']
+    cod_empresa = linha['EMPCODIGO']
+    somaImpostos = linha['ISS'] +  linha['IRRF'] + linha['COFINS'] + linha['CSL'] + linha['INSS'] + linha['PIS']
+
+
+    # BVD
+    for indice2, linha2 in df_group_by.iterrows():
+        lan_origem = "DFC ORIGEM"
+        if lan_codigo == linha2['CODIGO'] and cod_empresa == linha2['EMPRESA']:
+            cdg = linha2['VALOR'] / ((valorBruto - somaImpostos) / valorBruto) if valorBruto != somaImpostos else 0.0
+            if linha['ISS'] == 0 and linha['IRRF'] == 0 and linha['PISCOFINSCSL'] == 0 and linha['COFINS'] and linha['CSL'] == 0 and linha['INSS'] == 0 and linha['VALOROUTRASRETENCOES'] == 0:
+                pass
+            else:
+                lan_historico = linha['OBS']
+                if linha['ISS'] != 0:
+                    lan_origem = "R"
+                    lan_natureza = "S"            
+                    linha_CRD_NOME = "ISS - S/FATURAMENTO"
+                    valor = linha['ISS']
+                    insercoes.append((empresa, lan_codigo, lan_data, (valor/valorBruto)*linha2['VALOR']*-1, lan_historico, "DFC ORIGEM", lan_natureza, linha_CRD_NOME, crs_nome))
+                if linha['IRRF'] != 0:
+                    lan_origem = "R"
+                    lan_natureza = "S"
+                    valor = linha['IRRF']
+                    linha_CRD_NOME = "IRRF - S/FATURAMENTO"
+                    insercoes.append((empresa, lan_codigo, lan_data, (valor/valorBruto)*linha2['VALOR']*-1, lan_historico, "DFC ORIGEM", lan_natureza, linha_CRD_NOME, crs_nome))
+                if linha['PIS'] !=  0:
+                    lan_origem = "R"
+                    lan_natureza = "S"
+                    valor = linha['PIS']
+                    linha_CRD_NOME ="PIS - S/FATURAMENTO"
+                    insercoes.append((empresa, lan_codigo, lan_data, (valor/valorBruto)*linha2['VALOR']*-1, lan_historico, "DFC ORIGEM", lan_natureza, linha_CRD_NOME, crs_nome))
+                if linha['COFINS'] != 0:
+                    lan_origem = "R"
+                    lan_natureza = "S"
+                    valor = linha['COFINS']
+                    linha_CRD_NOME = "COFINS - S/FATURAMENTO"
+                    insercoes.append((empresa, lan_codigo, lan_data, (valor/valorBruto)*linha2['VALOR']*-1, lan_historico, "DFC ORIGEM", lan_natureza, linha_CRD_NOME, crs_nome))
+                if linha['CSL'] != 0:
+                    lan_origem = "R"
+                    lan_natureza = "S"
+                    valor = linha['CSL']
+                    linha_CRD_NOME = "CSL - S/FATURAMENTO"
+                    insercoes.append((empresa, lan_codigo, lan_data, (valor/valorBruto)*linha2['VALOR']*-1, lan_historico, "DFC ORIGEM", lan_natureza, linha_CRD_NOME, crs_nome))
+                if linha['INSS'] != 0:
+                    lan_origem = "R"
+                    lan_natureza = "S"
+                    valor = linha['INSS']
+                    linha_CRD_NOME = "INSS - S/FATURAMENTO"
+                    insercoes.append((empresa, lan_codigo, lan_data, (valor/valorBruto)*linha2['VALOR']*-1, lan_historico, "DFC ORIGEM", lan_natureza, linha_CRD_NOME, crs_nome))
+                if linha['VALOROUTRASRETENCOES'] != 0:
+                    lan_origem = "R"
+                    lan_natureza = "S"
+                    valor = linha['VALOROUTRASRETENCOES']
+                    linha_CRD_NOME = "VALOROUTRASRETENCOES - S/FATURAMENTO"
+                    insercoes.append((empresa, lan_codigo, lan_data, (valor/valorBruto)*linha2['VALOR']*-1, lan_historico, "DFC ORIGEM", lan_natureza, linha_CRD_NOME, crs_nome))
+                
+
+
+
+#################################################################################################
+
+
+# Lançamentos para impostos da DRE
+for indice, linha in df.iterrows():
+    valor = linha['VALOR']
+    valorBruto = valor
+    crd_nome = linha['NOMECRD']
+    crs_nome = linha['NOMECRS']
+    empresa = linha['EMPRESA']
+    lan_codigo = linha['CODIGO']
+    lan_data = linha['DATA']
+    lan_historico = linha['OBS']
+    cod_empresa = linha['EMPCODIGO']
+    somaImpostos = linha['ISS'] +  linha['IRRF'] + linha['COFINS'] + linha['CSL'] + linha['INSS'] + linha['PIS']
+
+
+
     if linha['ISS'] == 0 and linha['IRRF'] == 0 and linha['PISCOFINSCSL'] == 0 and linha['COFINS'] and linha['CSL'] == 0 and linha['INSS'] == 0 and linha['VALOROUTRASRETENCOES'] == 0:
         pass
     else:
@@ -143,44 +240,46 @@ for indice, linha in df.iterrows():
             lan_natureza = "S"            
             linha_CRD_NOME = "ISS - S/FATURAMENTO"
             valor = linha['ISS']*-1
-            insercoes.append((empresa, lan_codigo, lan_data, valor, lan_historico, lan_origem, lan_natureza, linha_CRD_NOME, crs_nome))
+            insercoes.append((empresa, lan_codigo, lan_data, (valor/valorBruto)*valorBruto*-1, lan_historico, "DRE ORIGEM", lan_natureza, linha_CRD_NOME, crs_nome))
         if linha['IRRF'] != 0:
             lan_origem = "R"
             lan_natureza = "S"
             valor = linha['IRRF']*-1
             linha_CRD_NOME = "IRRF - S/FATURAMENTO"
-            insercoes.append((empresa, lan_codigo, lan_data, valor, lan_historico, lan_origem, lan_natureza, linha_CRD_NOME, crs_nome))
+            insercoes.append((empresa, lan_codigo, lan_data, (valor/valorBruto)*valorBruto*-1, lan_historico, "DRE ORIGEM", lan_natureza, linha_CRD_NOME, crs_nome))
         if linha['PIS'] !=  0:
             lan_origem = "R"
             lan_natureza = "S"
             valor = linha['PIS']*-1
             linha_CRD_NOME ="PIS - S/FATURAMENTO"
-            insercoes.append((empresa, lan_codigo, lan_data, valor, lan_historico, lan_origem, lan_natureza, linha_CRD_NOME, crs_nome))
+            insercoes.append((empresa, lan_codigo, lan_data, (valor/valorBruto)*valorBruto*-1, lan_historico, "DRE ORIGEM", lan_natureza, linha_CRD_NOME, crs_nome))
         if linha['COFINS'] != 0:
             lan_origem = "R"
             lan_natureza = "S"
             valor = linha['COFINS']*-1
             linha_CRD_NOME = "COFINS - S/FATURAMENTO"
-            insercoes.append((empresa, lan_codigo, lan_data, valor, lan_historico, lan_origem, lan_natureza, linha_CRD_NOME, crs_nome))
+            insercoes.append((empresa, lan_codigo, lan_data, (valor/valorBruto)*valorBruto*-1, lan_historico, "DRE ORIGEM", lan_natureza, linha_CRD_NOME, crs_nome))
         if linha['CSL'] != 0:
             lan_origem = "R"
             lan_natureza = "S"
             valor = linha['CSL']*-1
             linha_CRD_NOME = "CSL - S/FATURAMENTO"
-            insercoes.append((empresa, lan_codigo, lan_data, valor, lan_historico, lan_origem, lan_natureza, linha_CRD_NOME, crs_nome))
+            insercoes.append((empresa, lan_codigo, lan_data, (valor/valorBruto)*valorBruto*-1, lan_historico, "DRE ORIGEM", lan_natureza, linha_CRD_NOME, crs_nome))
         if linha['INSS'] != 0:
             lan_origem = "R"
             lan_natureza = "S"
             valor = linha['INSS']*-1
             linha_CRD_NOME = "INSS - S/FATURAMENTO"
-            insercoes.append((empresa, lan_codigo, lan_data, valor, lan_historico, lan_origem, lan_natureza, linha_CRD_NOME, crs_nome))
+            insercoes.append((empresa, lan_codigo, lan_data, (valor/valorBruto)*valorBruto*-1, lan_historico, "DRE ORIGEM", lan_natureza, linha_CRD_NOME, crs_nome))
+
         if linha['VALOROUTRASRETENCOES'] != 0:
             lan_origem = "R"
             lan_natureza = "S"
             valor = linha['VALOROUTRASRETENCOES']*-1
             linha_CRD_NOME = "VALOROUTRASRETENCOES - S/FATURAMENTO"
-            insercoes.append((empresa, lan_codigo, lan_data, valor, lan_historico, lan_origem, lan_natureza, linha_CRD_NOME, crs_nome))
-         
+            insercoes.append((empresa, lan_codigo, lan_data, (valor/valorBruto)*valorBruto*-1, lan_historico, "DRE ORIGEM", lan_natureza, linha_CRD_NOME, crs_nome))
+
+
 df_2 = pd.DataFrame(insercoes)
 df_final = pd.concat([df_1, df_2, df_3])
 df_final.columns = ['EMPRESA', 'CODIGO', 'DATA', 'VALOR', 'HISTORICO', 'ORIGEM', 'NATUREZA', 'CRD', 'CRS']
@@ -193,7 +292,7 @@ import re
 df10 = pd.read_excel('./FINAL.xlsx')
 
 
-df10.columns = ['EMPRESA', 'CODIGO', 'DATA', 'VALOR', 'HISTORICO', 'NATUREZA', 'ORIGEM', 'CATEGORIA', 'CENTRO DE CUSTO']
+df10.columns = ['EMPRESA', 'CODIGO', 'DATA', 'VALOR', 'HISTORICO', 'ORIGEM', 'NATUREZA', 'CATEGORIA', 'CENTRO DE CUSTO']
 
 
 lista = []
