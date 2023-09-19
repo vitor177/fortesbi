@@ -8,9 +8,6 @@ Para execução primeiramente precisa ter o arquivo .fdb do banco com a conexão
 
 Em seguida configure o ambiente python para suporte às seguintes bibliotecas:
 
-[pyodbc,
-datetime,
-pandas,
-openpyxl]
+pip install -r requirements.txt
 
 Rode  script.py e obtenha o arquivo excel de saída
