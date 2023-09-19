@@ -13,6 +13,4 @@ datetime,
 pandas,
 openpyxl]
 
-Rode o script extracao_bd_to_xlsx.py e obtenha o arquivo excel de saída
-
-Utilize o arquivo remover_caracteres_especiais.py passando o path do arquivo de saída da etapa anterior para obter o arquivo final
+Rode  script.py e obtenha o arquivo excel de saída
