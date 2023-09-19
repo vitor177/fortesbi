@@ -138,7 +138,7 @@ for indice, linha in df.iterrows():
             
             for i in lista_nomes:
                 if crd_nome == i:
-                    insercoes.append((empresa, lan_codigo, lan_data, cdg, lan_historico, lan_origem, lan_natureza, crd_nome + " - BRUTO", crs_nome)) 
+                    insercoes.append((empresa, lan_codigo, linha2['DATABVD'], cdg, lan_historico, lan_origem, lan_natureza, crd_nome + " - BRUTO", crs_nome)) 
             lista_cdgs.append(cdg)
 
 
